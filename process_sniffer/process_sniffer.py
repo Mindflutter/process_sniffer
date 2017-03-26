@@ -1,35 +1,31 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import psutil
-import datetime
+import json
+
+from helpers import readable_timestamp, get_file_info, get_ports
 
 
-output = {}
-
-def readable_timestamp(timestamp):
-    return datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+OUTPUT_FILE = 'process_info.txt'
 
 
-for process in psutil.process_iter():
-    info = process.as_dict(attrs=['pid', 'username', 'create_time', 'exe', 'cmdline', 'connections'])
-    output[process.pid] = {'username': info['username'],
-                   'create_time': readable_timestamp(info['create_time']),
-                   'exe_path': info['exe'],
-                   'exe_info': None,
-                   'cmdline_args': info['cmdline'],
-                   'open_ports': None}
-print output
+def main():
+    """ Entry point """
+    output = {}
+    for process in psutil.process_iter():
+        info = process.as_dict(attrs=['pid', 'username', 'create_time', 'exe', 'cmdline', 'connections'])
+        output[process.pid] = {'username': info['username'],
+                               'start_time': readable_timestamp(info['create_time']),
+                               'exe_path': info['exe'],
+                               'exe_info': get_file_info(info['exe']),
+                               'cmdline_args': info['cmdline'],
+                               'open_ports': get_ports(info['connections']),
+                               'children': True if process.children() else False}
+
+    with open(OUTPUT_FILE, 'w') as outfile:
+        outfile.write(json.dumps(output, indent=4, sort_keys=True))
 
 
-def get_file_info(process_path):
-    # os module: created, modified, filesize
-    pass
-
-
-def get_ports(connections):
-    # get ports from laddrs
-    pass
-
-# def main():
-#     pass
-#
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()
